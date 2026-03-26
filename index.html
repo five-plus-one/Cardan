@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>内滑轮线与运动学矢量合成 (平行四边形法则)</title>
+    <script>
+        MathJax = {
+            tex: {inlineMath: [['$', '$'], ['\\(', '\\)']]}
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background-color: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+            display: flex;
+            gap: 30px;
+            max-width: 1000px;
+        }
+        canvas {
+            background-color: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            cursor: grab;
+        }
+        canvas:active { cursor: grabbing; }
+        .controls-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-width: 300px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        label { font-size: 14px; font-weight: 600; color: #495057; display: flex; justify-content: space-between;}
+        input[type=range] { width: 100%; cursor: pointer;}
+        .buttons { display: flex; gap: 8px; margin-top: 5px;}
+        button {
+            flex: 1;
+            padding: 10px 5px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            background-color: #0d6efd;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            transition: 0.2s;
+        }
+        button:hover { background-color: #0b5ed7; }
+        button.btn-danger { background-color: #dc3545; }
+        button.btn-danger:hover { background-color: #bb2d3b; }
+        button.btn-warning { background-color: #ffc107; color: #212529; }
+        button.btn-warning:hover { background-color: #ffca2c; }
+        .legend div { font-size: 14px; margin-bottom: 8px; display: flex; align-items: center;}
+        .legend span { display: inline-block; width: 16px; height: 3px; margin-right: 10px; }
+        .tip { font-size: 13px; color: #198754; font-weight: bold; text-align: left; margin-top: -5px; line-height: 1.4;}
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <canvas id="simCanvas" width="600" height="600"></canvas>
+    
+    <div class="controls-panel">
+        <h3 style="margin-top: 0; margin-bottom: 5px; color: #212529;">运动学矢量可视化</h3>
+        <p class="tip">💡 提示：可以在画布中直接使用鼠标**拖拽**绿色的 P 点来改变其初始相位！</p>
+        
+        <div class="buttons" style="margin-bottom: 10px;">
+            <button id="playBtn" style="background-color: #198754;">开始运动</button>
+            <button id="resetBtn" class="btn-warning">复位</button>
+            <button id="clearBtn" class="btn-danger">清空轨迹</button>
+        </div>
+
+        <div class="control-group">
+            <label>小齿轮半径 (r): <span id="rValue">90</span></label>
+            <input type="range" id="rSlider" min="30" max="150" step="1" value="90">
+            <small style="color:#6c757d; font-size:12px;">大齿轮 R 固定为 180 (卡尔丹圆 r=90)</small>
+        </div>
+
+        <div class="control-group">
+            <label>P点到小圆心距离 (d): <span id="dValue">90</span></label>
+            <input type="range" id="dSlider" min="0" max="200" step="1" value="90">
+        </div>
+
+        <div class="control-group">
+            <label>运行速度 ($\omega$): <span id="speedValue">0.008</span></label>
+            <input type="range" id="speedSlider" min="0.001" max="0.03" step="0.001" value="0.008">
+        </div>
+
+        <div class="control-group">
+            <label style="justify-content: flex-start; gap: 10px; cursor: pointer; font-weight: normal;">
+                <input type="checkbox" id="showVectors" checked> 显示平行四边形矢量合成
+            </label>
+            <label style="justify-content: flex-start; gap: 10px; cursor: pointer; font-weight: normal;">
+                <input type="checkbox" id="showTrace" checked> 绘制 P 点运动轨迹
+            </label>
+        </div>
+
+        <div class="control-group legend" style="margin-top: auto;">
+            <h4 style="margin: 0 0 10px 0; font-size: 15px;">矢量图例  $\vec{v}_P = \vec{v}_C + \vec{v}_{P/C}$</h4>
+            <div><span style="background-color: #0d6efd;"></span> $\vec{v}_C$ (牵连速度，平移)</div>
+            <div><span style="background-color: #fd7e14;"></span> $\vec{v}_{P/C}$ (相对速度，旋转)</div>
+            <div><span style="background-color: #198754; height: 4px;"></span> $\vec{v}_P$ (绝对速度，对角线相切于轨迹)</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // UI Elements
+    const playBtn = document.getElementById('playBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const rSlider = document.getElementById('rSlider');
+    const dSlider = document.getElementById('dSlider');
+    const speedSlider = document.getElementById('speedSlider');
+    const showVectors = document.getElementById('showVectors');
+    const showTrace = document.getElementById('showTrace');
+    
+    // Value Displays
+    const rValue = document.getElementById('rValue');
+    const dValue = document.getElementById('dValue');
+    const speedValue = document.getElementById('speedValue');
+
+    const width = canvas.width;
+    const height = canvas.height;
+    const cx = width / 2;
+    const cy = height / 2;
+    const R = 180;
+
+    // 核心物理与几何参量
+    let r = parseInt(rSlider.value);
+    let d = parseInt(dSlider.value);
+    let omega = parseFloat(speedSlider.value);
+    
+    let theta = 0;      // 小齿轮圆心公转角度
+    let phi_0 = 0;      // P 点在小齿轮上的初始相位角
+    
+    let isPlaying = false; 
+    let tracePath = [];
+    
+    // 交互状态参量
+    let isDraggingP = false;
+    let currentPx = cx + R; 
+    let currentPy = cy;
+
+    function getMousePos(canvas, evt) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+            x: (evt.clientX - rect.left) / (rect.right - rect.left) * canvas.width,
+            y: (evt.clientY - rect.top) / (rect.bottom - rect.top) * canvas.height
+        };
+    }
+
+    function updateParams() {
+        r = parseInt(rSlider.value);
+        d = parseInt(dSlider.value);
+        omega = parseFloat(speedSlider.value);
+        rValue.innerText = r;
+        dValue.innerText = d;
+        speedValue.innerText = omega.toFixed(3);
+        
+        if(!isDraggingP) tracePath = []; 
+        if(!isPlaying) drawFrame(); 
+    }
+
+    rSlider.addEventListener('input', updateParams);
+    dSlider.addEventListener('input', updateParams);
+    speedSlider.addEventListener('input', updateParams);
+    
+    clearBtn.addEventListener('click', () => { 
+        tracePath = []; 
+        if(!isPlaying) drawFrame();
+    });
+
+    playBtn.addEventListener('click', () => { 
+        isPlaying = !isPlaying; 
+        if(isPlaying) {
+            playBtn.innerText = "暂停运动";
+            playBtn.style.backgroundColor = "#ffc107";
+            playBtn.style.color = "#000";
+        } else {
+            playBtn.innerText = "继续运动";
+            playBtn.style.backgroundColor = "#198754";
+            playBtn.style.color = "#fff";
+        }
+    });
+
+    resetBtn.addEventListener('click', () => {
+        isPlaying = false;
+        playBtn.innerText = "开始运动";
+        playBtn.style.backgroundColor = "#198754";
+        playBtn.style.color = "#fff";
+        
+        theta = 0;
+        phi_0 = 0; 
+        tracePath = [];
+        updateParams();
+        drawFrame();
+    });
+
+    canvas.addEventListener('mousedown', (e) => {
+        const pos = getMousePos(canvas, e);
+        if (Math.hypot(pos.x - currentPx, pos.y - currentPy) < 20) {
+            isDraggingP = true;
+        }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+        if (!isDraggingP) return;
+        
+        const pos = getMousePos(canvas, e);
+        const cx_small = cx + (R - r) * Math.cos(theta);
+        const cy_small = cy + (R - r) * Math.sin(theta);
+        const dx = pos.x - cx_small;
+        const dy = pos.y - cy_small;
+
+        const targetAlpha = Math.atan2(dy, dx);
+        phi_0 = targetAlpha + ((R - r) / r) * theta;
+
+        tracePath = []; 
+        if (!isPlaying) drawFrame(); 
+    });
+
+    window.addEventListener('mouseup', () => { isDraggingP = false; });
+
+    function drawArrow(fromX, fromY, toX, toY, color, lineWidth = 2) {
+        if (Math.abs(fromX - toX) < 0.1 && Math.abs(fromY - toY) < 0.1) return;
+        const headlen = 8; 
+        const angle = Math.atan2(toY - fromY, toX - fromX);
+        ctx.beginPath();
+        ctx.moveTo(fromX, fromY);
+        ctx.lineTo(toX, toY);
+        ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 6), toY - headlen * Math.sin(angle - Math.PI / 6));
+        ctx.moveTo(toX, toY);
+        ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 6), toY - headlen * Math.sin(angle + Math.PI / 6));
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineWidth;
+        ctx.stroke();
+    }
+
+    function drawFrame() {
+        ctx.clearRect(0, 0, width, height);
+
+        // 1. 绘制大齿轮
+        ctx.beginPath();
+        ctx.arc(cx, cy, R, 0, Math.PI * 2);
+        ctx.strokeStyle = '#343a40';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+        ctx.fillStyle = '#000';
+        ctx.fill();
+
+        // 2. 运动学计算
+        const cx_small = cx + (R - r) * Math.cos(theta);
+        const cy_small = cy + (R - r) * Math.sin(theta);
+        
+        const vcx = -(R - r) * omega * Math.sin(theta);
+        const vcy =  (R - r) * omega * Math.cos(theta);
+
+        const alpha = -((R - r) / r) * theta + phi_0;
+        const omega_rel = -((R - r) / r) * omega;
+
+        const px_rel = d * Math.cos(alpha);
+        const py_rel = d * Math.sin(alpha);
+
+        currentPx = cx_small + px_rel;
+        currentPy = cy_small + py_rel;
+
+        const vpcx = -omega_rel * py_rel;
+        const vpcy =  omega_rel * px_rel;
+
+        const vpx = vcx + vpcx;
+        const vpy = vcy + vpcy;
+
+        // 3. 绘制轨迹
+        if (isPlaying && !isDraggingP && showTrace.checked) {
+            tracePath.push({x: currentPx, y: currentPy});
+            if (tracePath.length > 2500) tracePath.shift(); 
+        }
+        
+        if (showTrace.checked && tracePath.length > 0) {
+            ctx.beginPath();
+            ctx.moveTo(tracePath[0].x, tracePath[0].y);
+            for (let i = 1; i < tracePath.length; i++) {
+                ctx.lineTo(tracePath[i].x, tracePath[i].y);
+            }
+            ctx.strokeStyle = 'rgba(220, 53, 69, 0.6)'; 
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        // 4. 绘制小齿轮和结构线
+        ctx.beginPath();
+        ctx.arc(cx_small, cy_small, r, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(13, 110, 253, 0.5)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx_small, cy_small);
+        ctx.lineTo(currentPx, currentPy);
+        ctx.strokeStyle = '#adb5bd';
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(cx_small, cy_small, 4, 0, Math.PI * 2);
+        ctx.fillStyle = '#0d6efd';
+        ctx.fill();
+        
+        ctx.beginPath();
+        ctx.arc(currentPx, currentPy, isDraggingP ? 9 : 6, 0, Math.PI * 2);
+        ctx.fillStyle = isDraggingP ? '#ffc107' : '#198754';
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // 5. 绘制速度矢量 (平行四边形法则)
+        if (showVectors.checked) {
+            const v_scale = 60; // 放大比例，使平行四边形更直观
+            
+            // 计算各矢量的末端坐标
+            const p_vcx = currentPx + vcx * v_scale;
+            const p_vcy = currentPy + vcy * v_scale;
+            
+            const p_vpcx = currentPx + vpcx * v_scale;
+            const p_vpcy = currentPy + vpcy * v_scale;
+            
+            const p_vpx = currentPx + vpx * v_scale;
+            const p_vpy = currentPy + vpy * v_scale;
+
+            // 绘制牵连速度和相对速度（都从 P 点出发）
+            drawArrow(currentPx, currentPy, p_vcx, p_vcy, '#0d6efd');
+            drawArrow(currentPx, currentPy, p_vpcx, p_vpcy, '#fd7e14');
+
+            // 绘制平行四边形的辅助虚线
+            ctx.beginPath();
+            ctx.setLineDash([5, 5]);
+            
+            // 连线：牵连速度箭头 -> 总速度箭头
+            ctx.moveTo(p_vcx, p_vcy);
+            ctx.lineTo(p_vpx, p_vpy);
+            
+            // 连线：相对速度箭头 -> 总速度箭头
+            ctx.moveTo(p_vpcx, p_vpcy);
+            ctx.lineTo(p_vpx, p_vpy);
+            
+            ctx.strokeStyle = 'rgba(173, 181, 189, 0.8)'; // 半透明灰色辅助线
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.setLineDash([]); // 恢复实线
+
+            // 绘制绝对速度（对角线）
+            drawArrow(currentPx, currentPy, p_vpx, p_vpy, '#198754', 3);
+        }
+    }
+
+    function loop() {
+        if (isPlaying && !isDraggingP) {
+            theta += omega;
+        }
+        drawFrame();
+        requestAnimationFrame(loop);
+    }
+
+    drawFrame();
+    loop(); 
+</script>
+
+</body>
+</html>
