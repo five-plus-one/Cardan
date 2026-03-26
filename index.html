@@ -2,7 +2,8 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>内滑轮线与运动学矢量合成 (平行四边形法则)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>内滑轮线与运动学矢量合成 (响应式版)</title>
     <script>
         MathJax = {
             tex: {inlineMath: [['$', '$'], ['\\(', '\\)']]}
@@ -18,29 +19,59 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f0f2f5;
             margin: 0;
-            padding: 20px;
+            padding: 15px;
+            box-sizing: border-box;
+            min-height: 100vh;
         }
         .container {
             background-color: white;
-            padding: 25px;
+            padding: 20px;
             border-radius: 12px;
             box-shadow: 0 10px 20px rgba(0,0,0,0.08);
             display: flex;
-            gap: 30px;
+            flex-direction: column; /* 默认移动端为上下布局 */
+            gap: 25px;
+            width: 100%;
             max-width: 1000px;
+            box-sizing: border-box;
         }
+        
+        /* 桌面端屏幕适配：大于 800px 时切换为左右布局 */
+        @media (min-width: 800px) {
+            .container {
+                flex-direction: row;
+                padding: 25px;
+            }
+        }
+
+        .canvas-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
         canvas {
             background-color: #ffffff;
             border: 1px solid #dee2e6;
             border-radius: 8px;
             cursor: grab;
+            width: 100%; /* 画布自适应父容器宽度 */
+            height: auto;
+            aspect-ratio: 1 / 1; /* 保持正方形比例 */
+            touch-action: none; /* 防止移动端拖拽时页面滚动 */
         }
         canvas:active { cursor: grabbing; }
+        
         .controls-panel {
             display: flex;
             flex-direction: column;
             gap: 15px;
-            min-width: 300px;
+            flex: 1;
+            min-width: 280px;
         }
         .control-group {
             display: flex;
@@ -53,9 +84,10 @@
         }
         label { font-size: 14px; font-weight: 600; color: #495057; display: flex; justify-content: space-between;}
         input[type=range] { width: 100%; cursor: pointer;}
-        .buttons { display: flex; gap: 8px; margin-top: 5px;}
+        .buttons { display: flex; gap: 8px; margin-top: 5px; flex-wrap: wrap;}
         button {
             flex: 1;
+            min-width: 80px;
             padding: 10px 5px;
             font-size: 14px;
             font-weight: bold;
@@ -73,17 +105,19 @@
         button.btn-warning:hover { background-color: #ffca2c; }
         .legend div { font-size: 14px; margin-bottom: 8px; display: flex; align-items: center;}
         .legend span { display: inline-block; width: 16px; height: 3px; margin-right: 10px; }
-        .tip { font-size: 13px; color: #198754; font-weight: bold; text-align: left; margin-top: -5px; line-height: 1.4;}
+        .tip { font-size: 13px; color: #198754; font-weight: normal; text-align: left; margin-top: -5px; line-height: 1.5; padding: 8px; background-color: #e8f5e9; border-radius: 6px;}
     </style>
 </head>
 <body>
 
 <div class="container">
-    <canvas id="simCanvas" width="600" height="600"></canvas>
+    <div class="canvas-wrapper">
+        <canvas id="simCanvas" width="600" height="600"></canvas>
+    </div>
     
     <div class="controls-panel">
         <h3 style="margin-top: 0; margin-bottom: 5px; color: #212529;">运动学矢量可视化</h3>
-        <p class="tip">💡 提示：可以在画布中直接使用鼠标**拖拽**绿色的 P 点来改变其初始相位！</p>
+        <div class="tip">💡 提示：可以在左侧画布中直接使用鼠标（或手指）<strong>拖拽</strong>绿色的 P 点来改变其初始相位！</div>
         
         <div class="buttons" style="margin-bottom: 10px;">
             <button id="playBtn" style="background-color: #198754;">开始运动</button>
@@ -95,11 +129,6 @@
             <label>小齿轮半径 (r): <span id="rValue">90</span></label>
             <input type="range" id="rSlider" min="30" max="150" step="1" value="90">
             <small style="color:#6c757d; font-size:12px;">大齿轮 R 固定为 180 (卡尔丹圆 r=90)</small>
-        </div>
-
-        <div class="control-group">
-            <label>P点到小圆心距离 (d): <span id="dValue">90</span></label>
-            <input type="range" id="dSlider" min="0" max="200" step="1" value="90">
         </div>
 
         <div class="control-group">
@@ -134,16 +163,15 @@
     const resetBtn = document.getElementById('resetBtn');
     const clearBtn = document.getElementById('clearBtn');
     const rSlider = document.getElementById('rSlider');
-    const dSlider = document.getElementById('dSlider');
     const speedSlider = document.getElementById('speedSlider');
     const showVectors = document.getElementById('showVectors');
     const showTrace = document.getElementById('showTrace');
     
     // Value Displays
     const rValue = document.getElementById('rValue');
-    const dValue = document.getElementById('dValue');
     const speedValue = document.getElementById('speedValue');
 
+    // 内部渲染分辨率
     const width = canvas.width;
     const height = canvas.height;
     const cx = width / 2;
@@ -152,11 +180,10 @@
 
     // 核心物理与几何参量
     let r = parseInt(rSlider.value);
-    let d = parseInt(dSlider.value);
     let omega = parseFloat(speedSlider.value);
     
-    let theta = 0;      // 小齿轮圆心公转角度
-    let phi_0 = 0;      // P 点在小齿轮上的初始相位角
+    let theta = 0;      
+    let phi_0 = 0;      
     
     let isPlaying = false; 
     let tracePath = [];
@@ -166,20 +193,27 @@
     let currentPx = cx + R; 
     let currentPy = cy;
 
-    function getMousePos(canvas, evt) {
+    // 优化后的坐标系转换：适配 CSS 缩放后的画布
+    function getEventPos(canvas, evt) {
         const rect = canvas.getBoundingClientRect();
+        // 兼容移动端触摸事件和桌面端鼠标事件
+        const clientX = evt.touches && evt.touches.length > 0 ? evt.touches[0].clientX : evt.clientX;
+        const clientY = evt.touches && evt.touches.length > 0 ? evt.touches[0].clientY : evt.clientY;
+        
+        // 计算 CSS 缩放比例
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        
         return {
-            x: (evt.clientX - rect.left) / (rect.right - rect.left) * canvas.width,
-            y: (evt.clientY - rect.top) / (rect.bottom - rect.top) * canvas.height
+            x: (clientX - rect.left) * scaleX,
+            y: (clientY - rect.top) * scaleY
         };
     }
 
     function updateParams() {
         r = parseInt(rSlider.value);
-        d = parseInt(dSlider.value);
         omega = parseFloat(speedSlider.value);
         rValue.innerText = r;
-        dValue.innerText = d;
         speedValue.innerText = omega.toFixed(3);
         
         if(!isDraggingP) tracePath = []; 
@@ -187,7 +221,6 @@
     }
 
     rSlider.addEventListener('input', updateParams);
-    dSlider.addEventListener('input', updateParams);
     speedSlider.addEventListener('input', updateParams);
     
     clearBtn.addEventListener('click', () => { 
@@ -221,17 +254,20 @@
         drawFrame();
     });
 
-    canvas.addEventListener('mousedown', (e) => {
-        const pos = getMousePos(canvas, e);
-        if (Math.hypot(pos.x - currentPx, pos.y - currentPy) < 20) {
+    // ========== 统一处理鼠标和触摸拖拽逻辑 ==========
+    function handleStart(e) {
+        const pos = getEventPos(canvas, e);
+        if (Math.hypot(pos.x - currentPx, pos.y - currentPy) < 30) { // 稍微增大移动端容错半径
             isDraggingP = true;
+            if(e.cancelable) e.preventDefault(); // 防止触发屏幕滑动
         }
-    });
+    }
 
-    canvas.addEventListener('mousemove', (e) => {
+    function handleMove(e) {
         if (!isDraggingP) return;
+        if(e.cancelable) e.preventDefault();
         
-        const pos = getMousePos(canvas, e);
+        const pos = getEventPos(canvas, e);
         const cx_small = cx + (R - r) * Math.cos(theta);
         const cy_small = cy + (R - r) * Math.sin(theta);
         const dx = pos.x - cx_small;
@@ -242,9 +278,19 @@
 
         tracePath = []; 
         if (!isPlaying) drawFrame(); 
-    });
+    }
 
-    window.addEventListener('mouseup', () => { isDraggingP = false; });
+    function handleEnd() { isDraggingP = false; }
+
+    canvas.addEventListener('mousedown', handleStart);
+    canvas.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleEnd);
+
+    // 移动端触摸事件支持
+    canvas.addEventListener('touchstart', handleStart, {passive: false});
+    canvas.addEventListener('touchmove', handleMove, {passive: false});
+    window.addEventListener('touchend', handleEnd);
+    // ===============================================
 
     function drawArrow(fromX, fromY, toX, toY, color, lineWidth = 2) {
         if (Math.abs(fromX - toX) < 0.1 && Math.abs(fromY - toY) < 0.1) return;
@@ -276,7 +322,7 @@
         ctx.fillStyle = '#000';
         ctx.fill();
 
-        // 2. 运动学计算
+        // 2. 运动学计算 (d 强制等于 r)
         const cx_small = cx + (R - r) * Math.cos(theta);
         const cy_small = cy + (R - r) * Math.sin(theta);
         
@@ -286,8 +332,9 @@
         const alpha = -((R - r) / r) * theta + phi_0;
         const omega_rel = -((R - r) / r) * omega;
 
-        const px_rel = d * Math.cos(alpha);
-        const py_rel = d * Math.sin(alpha);
+        // P点固定在圆周上
+        const px_rel = r * Math.cos(alpha);
+        const py_rel = r * Math.sin(alpha);
 
         currentPx = cx_small + px_rel;
         currentPy = cy_small + py_rel;
@@ -342,11 +389,10 @@
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // 5. 绘制速度矢量 (平行四边形法则)
+        // 5. 绘制速度矢量
         if (showVectors.checked) {
-            const v_scale = 60; // 放大比例，使平行四边形更直观
+            const v_scale = 60; 
             
-            // 计算各矢量的末端坐标
             const p_vcx = currentPx + vcx * v_scale;
             const p_vcy = currentPy + vcy * v_scale;
             
@@ -356,28 +402,20 @@
             const p_vpx = currentPx + vpx * v_scale;
             const p_vpy = currentPy + vpy * v_scale;
 
-            // 绘制牵连速度和相对速度（都从 P 点出发）
             drawArrow(currentPx, currentPy, p_vcx, p_vcy, '#0d6efd');
             drawArrow(currentPx, currentPy, p_vpcx, p_vpcy, '#fd7e14');
 
-            // 绘制平行四边形的辅助虚线
             ctx.beginPath();
             ctx.setLineDash([5, 5]);
-            
-            // 连线：牵连速度箭头 -> 总速度箭头
             ctx.moveTo(p_vcx, p_vcy);
             ctx.lineTo(p_vpx, p_vpy);
-            
-            // 连线：相对速度箭头 -> 总速度箭头
             ctx.moveTo(p_vpcx, p_vpcy);
             ctx.lineTo(p_vpx, p_vpy);
-            
-            ctx.strokeStyle = 'rgba(173, 181, 189, 0.8)'; // 半透明灰色辅助线
+            ctx.strokeStyle = 'rgba(173, 181, 189, 0.8)';
             ctx.lineWidth = 1.5;
             ctx.stroke();
-            ctx.setLineDash([]); // 恢复实线
+            ctx.setLineDash([]); 
 
-            // 绘制绝对速度（对角线）
             drawArrow(currentPx, currentPy, p_vpx, p_vpy, '#198754', 3);
         }
     }
