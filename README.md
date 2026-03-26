@@ -19,9 +19,9 @@
 ### 1. 轨迹方程推导 (数学证明)
 设大齿轮半径为 $R$，小齿轮半径为 $r$，已知 $R=2r$。
 设小齿轮圆心 $C$ 绕 $O$ 公转的角速度为 $\omega$。以 $O$ 为原点建立极坐标系，初始时刻 $P$ 点位于最右侧 $(R, 0)$。
-* $C$ 点的坐标为：$(r\cos\omega t, r\sin\omega t)$
+* $C$ 点的坐标为： $(r\cos\omega t, r\sin\omega t)$
 * 由于纯滚动无滑动，小齿轮滚过的弧长等于大齿轮走过的弧长。小齿轮相对自身圆心 $C$ 旋转的角度 $\phi = -\frac{R-r}{r}\omega t = -\omega t$。
-* 点 $P$ 相对 $C$ 的坐标向量为：$(r\cos(-\omega t), r\sin(-\omega t))$
+* 点 $P$ 相对 $C$ 的坐标向量为： $(r\cos(-\omega t), r\sin(-\omega t))$
 
 进行矢量合成，得到点 $P$ 的绝对坐标 $(x, y)$：
 $$x = r\cos\omega t + r\cos(-\omega t) = 2r\cos\omega t = R\cos\omega t$$
