@@ -3,11 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>内滑轮线与运动学矢量合成 (响应式版)</title>
+    <title>内滑轮线与运动学矢量合成 (完整教学版)</title>
     <script>
-        MathJax = {
-            tex: {inlineMath: [['$', '$'], ['\\(', '\\)']]}
-        };
+        MathJax = { tex: {inlineMath: [['$', '$'], ['\\(', '\\)']]} };
     </script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 
@@ -16,42 +14,51 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f0f2f5;
             margin: 0;
-            padding: 15px;
+            padding: 20px;
             box-sizing: border-box;
             min-height: 100vh;
+            overflow-x: hidden;
         }
         .container {
             background-color: white;
-            padding: 20px;
+            padding: 25px;
             border-radius: 12px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
             display: flex;
-            flex-direction: column; /* 默认移动端为上下布局 */
-            gap: 25px;
-            width: 100%;
-            max-width: 1000px;
+            flex-direction: column; 
+            gap: 20px;
+            width: 100%; 
+            max-width: 1600px; 
             box-sizing: border-box;
         }
         
-        /* 桌面端屏幕适配：大于 800px 时切换为左右布局 */
-        @media (min-width: 800px) {
+        @media (min-width: 1000px) {
             .container {
                 flex-direction: row;
-                padding: 25px;
+                align-items: flex-start;
+                justify-content: center; 
             }
         }
 
         .canvas-wrapper {
-            flex: 1;
             display: flex;
             justify-content: center;
-            align-items: flex-start;
+            align-items: center;
             width: 100%;
-            max-width: 600px;
-            margin: 0 auto;
+            /* 核心修复 1：防止 Flex 子元素撑破父容器高度 */
+            min-height: 0; 
+        }
+        
+        @media (min-width: 1000px) {
+            .canvas-wrapper {
+                flex: 0 1 65%; 
+                justify-content: flex-end; 
+                padding-right: 15px;
+            }
         }
 
         canvas {
@@ -59,10 +66,18 @@
             border: 1px solid #dee2e6;
             border-radius: 8px;
             cursor: grab;
-            width: 100%; /* 画布自适应父容器宽度 */
+            
+            width: 100%; 
+            max-width: 1000px; 
+            
+            /* 核心修复 2：严格限制画布最大高度为视口高度的 75%，防止产生纵向滚动条 */
+            max-height: 75vh;
             height: auto;
-            aspect-ratio: 1 / 1; /* 保持正方形比例 */
-            touch-action: none; /* 防止移动端拖拽时页面滚动 */
+            aspect-ratio: 1 / 1; 
+            object-fit: contain;
+            
+            touch-action: none; 
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.02);
         }
         canvas:active { cursor: grabbing; }
         
@@ -70,15 +85,22 @@
             display: flex;
             flex-direction: column;
             gap: 15px;
-            flex: 1;
-            min-width: 280px;
+            width: 100%;
         }
+        
+        @media (min-width: 1000px) {
+            .controls-panel {
+                flex: 0 0 350px; 
+                padding-left: 15px;
+            }
+        }
+
         .control-group {
             display: flex;
             flex-direction: column;
             gap: 5px;
             background: #f8f9fa;
-            padding: 12px;
+            padding: 15px;
             border-radius: 8px;
             border: 1px solid #e9ecef;
         }
@@ -87,7 +109,7 @@
         .buttons { display: flex; gap: 8px; margin-top: 5px; flex-wrap: wrap;}
         button {
             flex: 1;
-            min-width: 80px;
+            min-width: 75px;
             padding: 10px 5px;
             font-size: 14px;
             font-weight: bold;
@@ -103,32 +125,80 @@
         button.btn-danger:hover { background-color: #bb2d3b; }
         button.btn-warning { background-color: #ffc107; color: #212529; }
         button.btn-warning:hover { background-color: #ffca2c; }
+        button.btn-info { background-color: #0dcaf0; color: #000; width: 100%; margin-top: 5px; padding: 12px; font-size: 15px;}
+        button.btn-info:hover { background-color: #31d2f2; }
+        
         .legend div { font-size: 14px; margin-bottom: 8px; display: flex; align-items: center;}
         .legend span { display: inline-block; width: 16px; height: 3px; margin-right: 10px; }
-        .tip { font-size: 13px; color: #198754; font-weight: normal; text-align: left; margin-top: -5px; line-height: 1.5; padding: 8px; background-color: #e8f5e9; border-radius: 6px;}
+        .tip { font-size: 13px; color: #198754; font-weight: normal; text-align: left; margin-top: -5px; line-height: 1.5; padding: 12px; background-color: #e8f5e9; border-radius: 6px;}
+
+        /* 模态框 (Modal) 样式 */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: none; justify-content: center; align-items: center;
+            z-index: 1000; padding: 20px;
+            backdrop-filter: blur(3px);
+        }
+        .modal-content {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 800px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            line-height: 1.6;
+            font-size: 15px;
+            color: #333;
+        }
+        .close-btn {
+            position: absolute; top: 15px; right: 20px;
+            font-size: 28px; cursor: pointer; color: #adb5bd; 
+            border: none; background: transparent; padding: 0;
+        }
+        .close-btn:hover { color: #dc3545; }
+        .modal-content h3 { color: #0d6efd; border-bottom: 2px solid #e9ecef; padding-bottom: 10px; margin-top: 0;}
+        .modal-content h4 { color: #198754; margin-top: 25px;}
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="canvas-wrapper">
-        <canvas id="simCanvas" width="600" height="600"></canvas>
+        <canvas id="simCanvas" width="1000" height="1000"></canvas>
     </div>
     
     <div class="controls-panel">
         <h3 style="margin-top: 0; margin-bottom: 5px; color: #212529;">运动学矢量可视化</h3>
         <div class="tip">💡 提示：可以在左侧画布中直接使用鼠标（或手指）<strong>拖拽</strong>绿色的 P 点来改变其初始相位！</div>
         
-        <div class="buttons" style="margin-bottom: 10px;">
+        <button id="showProblemBtn" class="btn-info">📖 查看原题与解析</button>
+
+        <div class="buttons" style="margin-bottom: 5px;">
             <button id="playBtn" style="background-color: #198754;">开始运动</button>
             <button id="resetBtn" class="btn-warning">复位</button>
             <button id="clearBtn" class="btn-danger">清空轨迹</button>
         </div>
 
         <div class="control-group">
-            <label>小齿轮半径 (r): <span id="rValue">90</span></label>
-            <input type="range" id="rSlider" min="30" max="150" step="1" value="90">
-            <small style="color:#6c757d; font-size:12px;">大齿轮 R 固定为 180 (卡尔丹圆 r=90)</small>
+            <label>转动方向:</label>
+            <div style="display: flex; gap: 20px; margin-top: 5px;">
+                <label style="font-weight: normal; cursor: pointer;">
+                    <input type="radio" name="direction" value="-1" checked> 逆时针 (原题)
+                </label>
+                <label style="font-weight: normal; cursor: pointer;">
+                    <input type="radio" name="direction" value="1"> 顺时针
+                </label>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>小齿轮半径 (r): <span id="rValue">150</span></label>
+            <input type="range" id="rSlider" min="50" max="280" step="1" value="150">
+            <small style="color:#6c757d; font-size:12px;">大齿轮 R 固定为 300 (卡尔丹圆 r=150)</small>
         </div>
 
         <div class="control-group">
@@ -136,21 +206,42 @@
             <input type="range" id="speedSlider" min="0.001" max="0.03" step="0.001" value="0.008">
         </div>
 
-        <div class="control-group">
-            <label style="justify-content: flex-start; gap: 10px; cursor: pointer; font-weight: normal;">
+        <div class="control-group legend">
+            <label style="justify-content: flex-start; gap: 10px; cursor: pointer; font-weight: normal; margin-bottom: 10px;">
                 <input type="checkbox" id="showVectors" checked> 显示平行四边形矢量合成
             </label>
-            <label style="justify-content: flex-start; gap: 10px; cursor: pointer; font-weight: normal;">
+            <label style="justify-content: flex-start; gap: 10px; cursor: pointer; font-weight: normal; margin-bottom: 15px;">
                 <input type="checkbox" id="showTrace" checked> 绘制 P 点运动轨迹
             </label>
-        </div>
-
-        <div class="control-group legend" style="margin-top: auto;">
+            
             <h4 style="margin: 0 0 10px 0; font-size: 15px;">矢量图例  $\vec{v}_P = \vec{v}_C + \vec{v}_{P/C}$</h4>
             <div><span style="background-color: #0d6efd;"></span> $\vec{v}_C$ (牵连速度，平移)</div>
             <div><span style="background-color: #fd7e14;"></span> $\vec{v}_{P/C}$ (相对速度，旋转)</div>
             <div><span style="background-color: #198754; height: 4px;"></span> $\vec{v}_P$ (绝对速度，对角线相切于轨迹)</div>
         </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="problemModal">
+    <div class="modal-content">
+        <button class="close-btn" id="closeModalBtn">&times;</button>
+        <h3>原题再现</h3>
+        <p>某人形机器人关节模组中传动机构的简化模型如图所示，大齿轮固定不动，圆心为 $O$，小齿轮的圆心为 $C$，$P$ 为小齿轮边缘上的一点，小齿轮始终紧贴大齿轮匀速滚动。小齿轮的直径与大齿轮的半径相等，则：</p>
+        <p>A. 图示时刻点 $P$ 的速度方向指向 $O$</p>
+        <p>B. 图示时刻点 $P$ 的加速度方向指向 $C$</p>
+        <p>C. 点 $P$ 的运动周期是点 $C$ 的两倍</p>
+        <p>D. $PO$ 之间的距离越小，点 $P$ 的加速度越大</p>
+
+        <h4>深度解析</h4>
+        <p>本题考查内摆线（Hypocycloid）中非常经典的特例——<strong>卡尔丹圆（Cardan Circle）</strong>运动学模型。</p>
+        <p>因为小齿轮直径等于大齿轮半径（即 $R=2r$），根据内摆线运动学特性，小圆圆周上任意一点的运动轨迹，都是一条穿过大圆圆心 $O$ 的直线。因此，点 $P$ 始终在直径上做<strong>简谐运动</strong>。</p>
+        <ul>
+            <li><strong>A正确</strong>：接触点 $K$ 是整个小齿轮的瞬时速度中心（瞬心）。因为是纯滚动，$KP \perp \vec{v}_P$。又因为圆周角 $\angle KPO = 90^\circ$（直径所对的圆周角），所以 $\vec{v}_P$ 必然沿着 $PO$ 方向。图示中小齿轮正向右下方逆时针滚动，$P$ 点距离 $O$ 点越来越近，故速度指向 $O$。</li>
+            <li><strong>B错误</strong>：点 $P$ 做以 $O$ 为平衡位置的简谐运动，其加速度 $\vec{a}$ 始终指向平衡位置（即圆心 $O$），而不是指向小圆圆心 $C$。</li>
+            <li><strong>C错误</strong>：小圆圆心 $C$ 绕 $O$ 公转一圈的时间内，点 $P$ 刚好沿直径完成一次“从一端到另一端再返回”的完整简谐运动，两者周期完全相等。</li>
+            <li><strong>D错误</strong>：根据简谐运动加速度公式 $a = \omega^2 x$，距离 $PO$（即位移 $x$）越小，点 $P$ 受到的“等效回复力”越小，加速度越小。到达中心 $O$ 时速度最大，加速度为零。</li>
+        </ul>
+        <p style="text-align: center; font-weight: bold; margin-top: 20px; color: #dc3545;">正确答案：A</p>
     </div>
 </div>
 
@@ -166,41 +257,59 @@
     const speedSlider = document.getElementById('speedSlider');
     const showVectors = document.getElementById('showVectors');
     const showTrace = document.getElementById('showTrace');
+    const directionRadios = document.getElementsByName('direction');
     
-    // Value Displays
+    // Modal Elements
+    const showProblemBtn = document.getElementById('showProblemBtn');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const problemModal = document.getElementById('problemModal');
+    
     const rValue = document.getElementById('rValue');
     const speedValue = document.getElementById('speedValue');
 
-    // 内部渲染分辨率
     const width = canvas.width;
     const height = canvas.height;
     const cx = width / 2;
     const cy = height / 2;
-    const R = 180;
+    const R = 300; 
 
     // 核心物理与几何参量
     let r = parseInt(rSlider.value);
     let omega = parseFloat(speedSlider.value);
     
-    let theta = 0;      
-    let phi_0 = 0;      
+    // 初始化位置：为了贴合原题图片（左下角，P点在左侧水平线上）
+    // 计算机图形学中 +y 是向下的，所以 3*PI/4 是视觉上的左下角
+    const INITIAL_THETA = Math.PI * 0.75; 
+    let theta = INITIAL_THETA;      
+    let phi_0 = 0; // P点相对相位保持为0，确保卡尔丹圆下正好落在水平直径上
     
     let isPlaying = false; 
     let tracePath = [];
     
-    // 交互状态参量
     let isDraggingP = false;
-    let currentPx = cx + R; 
-    let currentPy = cy;
+    let currentPx = 0; 
+    let currentPy = 0;
+    
+    // 获取当前选中的转动方向 (-1 为逆时针，1 为顺时针)
+    function getDirection() {
+        for (const radio of directionRadios) {
+            if (radio.checked) return parseInt(radio.value);
+        }
+        return -1;
+    }
 
-    // 优化后的坐标系转换：适配 CSS 缩放后的画布
+    // 模态框逻辑
+    showProblemBtn.addEventListener('click', () => { problemModal.style.display = 'flex'; });
+    closeModalBtn.addEventListener('click', () => { problemModal.style.display = 'none'; });
+    problemModal.addEventListener('click', (e) => { 
+        if (e.target === problemModal) problemModal.style.display = 'none'; 
+    });
+
     function getEventPos(canvas, evt) {
         const rect = canvas.getBoundingClientRect();
-        // 兼容移动端触摸事件和桌面端鼠标事件
         const clientX = evt.touches && evt.touches.length > 0 ? evt.touches[0].clientX : evt.clientX;
         const clientY = evt.touches && evt.touches.length > 0 ? evt.touches[0].clientY : evt.clientY;
         
-        // 计算 CSS 缩放比例
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
         
@@ -222,6 +331,14 @@
 
     rSlider.addEventListener('input', updateParams);
     speedSlider.addEventListener('input', updateParams);
+    
+    // 监听方向改变时清空轨迹
+    for (const radio of directionRadios) {
+        radio.addEventListener('change', () => {
+            tracePath = [];
+            if(!isPlaying) drawFrame();
+        });
+    }
     
     clearBtn.addEventListener('click', () => { 
         tracePath = []; 
@@ -247,19 +364,19 @@
         playBtn.style.backgroundColor = "#198754";
         playBtn.style.color = "#fff";
         
-        theta = 0;
+        // 恢复到原题的初始状态
+        theta = INITIAL_THETA;
         phi_0 = 0; 
         tracePath = [];
         updateParams();
         drawFrame();
     });
 
-    // ========== 统一处理鼠标和触摸拖拽逻辑 ==========
     function handleStart(e) {
         const pos = getEventPos(canvas, e);
-        if (Math.hypot(pos.x - currentPx, pos.y - currentPy) < 30) { // 稍微增大移动端容错半径
+        if (Math.hypot(pos.x - currentPx, pos.y - currentPy) < 50) { 
             isDraggingP = true;
-            if(e.cancelable) e.preventDefault(); // 防止触发屏幕滑动
+            if(e.cancelable) e.preventDefault(); 
         }
     }
 
@@ -286,15 +403,13 @@
     canvas.addEventListener('mousemove', handleMove);
     window.addEventListener('mouseup', handleEnd);
 
-    // 移动端触摸事件支持
     canvas.addEventListener('touchstart', handleStart, {passive: false});
     canvas.addEventListener('touchmove', handleMove, {passive: false});
     window.addEventListener('touchend', handleEnd);
-    // ===============================================
 
     function drawArrow(fromX, fromY, toX, toY, color, lineWidth = 2) {
         if (Math.abs(fromX - toX) < 0.1 && Math.abs(fromY - toY) < 0.1) return;
-        const headlen = 8; 
+        const headlen = 12; 
         const angle = Math.atan2(toY - fromY, toX - fromX);
         ctx.beginPath();
         ctx.moveTo(fromX, fromY);
@@ -318,29 +433,28 @@
         ctx.stroke();
         
         ctx.beginPath();
-        ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+        ctx.arc(cx, cy, 6, 0, Math.PI * 2);
         ctx.fillStyle = '#000';
         ctx.fill();
 
-        // 2. 运动学计算 (d 强制等于 r)
+        // 2. 运动学计算
         const cx_small = cx + (R - r) * Math.cos(theta);
         const cy_small = cy + (R - r) * Math.sin(theta);
         
-        const vcx = -(R - r) * omega * Math.sin(theta);
-        const vcy =  (R - r) * omega * Math.cos(theta);
+        // 速度方向受控制面板的单选框影响
+        const dir = getDirection();
+        
+        const vcx = -(R - r) * (dir * omega) * Math.sin(theta);
+        const vcy =  (R - r) * (dir * omega) * Math.cos(theta);
 
         const alpha = -((R - r) / r) * theta + phi_0;
-        const omega_rel = -((R - r) / r) * omega;
+        const omega_rel = -((R - r) / r) * (dir * omega);
 
-        // P点固定在圆周上
-        const px_rel = r * Math.cos(alpha);
-        const py_rel = r * Math.sin(alpha);
+        currentPx = cx_small + r * Math.cos(alpha);
+        currentPy = cy_small + r * Math.sin(alpha);
 
-        currentPx = cx_small + px_rel;
-        currentPy = cy_small + py_rel;
-
-        const vpcx = -omega_rel * py_rel;
-        const vpcy =  omega_rel * px_rel;
+        const vpcx = -omega_rel * (currentPy - cy_small);
+        const vpcy =  omega_rel * (currentPx - cx_small);
 
         const vpx = vcx + vpcx;
         const vpy = vcy + vpcy;
@@ -348,7 +462,7 @@
         // 3. 绘制轨迹
         if (isPlaying && !isDraggingP && showTrace.checked) {
             tracePath.push({x: currentPx, y: currentPy});
-            if (tracePath.length > 2500) tracePath.shift(); 
+            if (tracePath.length > 4000) tracePath.shift(); 
         }
         
         if (showTrace.checked && tracePath.length > 0) {
@@ -358,7 +472,7 @@
                 ctx.lineTo(tracePath[i].x, tracePath[i].y);
             }
             ctx.strokeStyle = 'rgba(220, 53, 69, 0.6)'; 
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 3; 
             ctx.stroke();
         }
 
@@ -366,7 +480,7 @@
         ctx.beginPath();
         ctx.arc(cx_small, cy_small, r, 0, Math.PI * 2);
         ctx.strokeStyle = 'rgba(13, 110, 253, 0.5)';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2.5;
         ctx.stroke();
 
         ctx.beginPath();
@@ -374,24 +488,25 @@
         ctx.lineTo(cx_small, cy_small);
         ctx.lineTo(currentPx, currentPy);
         ctx.strokeStyle = '#adb5bd';
+        ctx.lineWidth = 1.5;
         ctx.stroke();
 
         ctx.beginPath();
-        ctx.arc(cx_small, cy_small, 4, 0, Math.PI * 2);
+        ctx.arc(cx_small, cy_small, 6, 0, Math.PI * 2);
         ctx.fillStyle = '#0d6efd';
         ctx.fill();
         
         ctx.beginPath();
-        ctx.arc(currentPx, currentPy, isDraggingP ? 9 : 6, 0, Math.PI * 2);
+        ctx.arc(currentPx, currentPy, isDraggingP ? 15 : 10, 0, Math.PI * 2);
         ctx.fillStyle = isDraggingP ? '#ffc107' : '#198754';
         ctx.fill();
         ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 3;
         ctx.stroke();
 
         // 5. 绘制速度矢量
         if (showVectors.checked) {
-            const v_scale = 60; 
+            const v_scale = 65; 
             
             const p_vcx = currentPx + vcx * v_scale;
             const p_vcy = currentPy + vcy * v_scale;
@@ -402,27 +517,27 @@
             const p_vpx = currentPx + vpx * v_scale;
             const p_vpy = currentPy + vpy * v_scale;
 
-            drawArrow(currentPx, currentPy, p_vcx, p_vcy, '#0d6efd');
-            drawArrow(currentPx, currentPy, p_vpcx, p_vpcy, '#fd7e14');
+            drawArrow(currentPx, currentPy, p_vcx, p_vcy, '#0d6efd', 3); 
+            drawArrow(currentPx, currentPy, p_vpcx, p_vpcy, '#fd7e14', 3);
 
             ctx.beginPath();
-            ctx.setLineDash([5, 5]);
+            ctx.setLineDash([7, 7]);
             ctx.moveTo(p_vcx, p_vcy);
             ctx.lineTo(p_vpx, p_vpy);
             ctx.moveTo(p_vpcx, p_vpcy);
             ctx.lineTo(p_vpx, p_vpy);
-            ctx.strokeStyle = 'rgba(173, 181, 189, 0.8)';
-            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = 'rgba(173, 181, 189, 0.9)'; 
+            ctx.lineWidth = 2;
             ctx.stroke();
             ctx.setLineDash([]); 
 
-            drawArrow(currentPx, currentPy, p_vpx, p_vpy, '#198754', 3);
+            drawArrow(currentPx, currentPy, p_vpx, p_vpy, '#198754', 5);
         }
     }
 
     function loop() {
         if (isPlaying && !isDraggingP) {
-            theta += omega;
+            theta += getDirection() * omega;
         }
         drawFrame();
         requestAnimationFrame(loop);
