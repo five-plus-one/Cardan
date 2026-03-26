@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>内滑轮线与运动学矢量合成 (交互题解版)</title>
+    <title>2026南通二模物理T11思考</title>
     <script>
         MathJax = { tex: {inlineMath: [['$', '$'], ['\\(', '\\)']]} };
     </script>
@@ -96,6 +96,8 @@
     </div>
     
     <div class="sidebar">
+        <h3 style="margin-top: 0; margin-bottom: 15px; color: #212529; text-align: center;">2026南通二模物理T11思考</h3>
+        
         <div class="global-buttons">
             <button id="playBtn" class="action-btn play">▶ 开始运动</button>
             <button id="resetBtn" class="action-btn reset">↺ 初始位置 (复位)</button>
@@ -405,8 +407,7 @@
 
         // 绘制加速度矢量 (针对选项B和D)
         if (showAccel.checked) {
-            // 加速度指向圆心 O，大小正比于距离 PO
-            const a_scale = 0.6; // 缩放系数
+            const a_scale = 0.6; 
             const ax = cx - currentPx;
             const ay = cy - currentPy;
             drawArrow(currentPx, currentPy, currentPx + ax * a_scale, currentPy + ay * a_scale, '#dc3545', 5);
