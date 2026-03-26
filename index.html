@@ -19,31 +19,32 @@
         .container {
             background-color: white; padding: 25px; border-radius: 12px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.1); display: flex; flex-direction: column; 
-            gap: 20px; width: 100%; max-width: 1600px; box-sizing: border-box;
+            gap: 20px; width: 100%; max-width: 1400px; box-sizing: border-box;
         }
         @media (min-width: 1000px) {
-            .container { flex-direction: row; align-items: stretch; justify-content: center; }
+            .container { flex-direction: row; align-items: flex-start; justify-content: center; }
         }
 
         .canvas-wrapper { display: flex; justify-content: center; align-items: center; width: 100%; min-height: 0; }
         @media (min-width: 1000px) {
-            .canvas-wrapper { flex: 0 1 65%; justify-content: flex-end; padding-right: 15px; }
+            .canvas-wrapper { flex: 1; justify-content: center; padding-right: 20px; }
         }
 
         canvas {
             background-color: #ffffff; border: 1px solid #dee2e6; border-radius: 8px;
-            cursor: grab; width: 100%; max-width: 1000px; max-height: 80vh;
-            height: auto; aspect-ratio: 1 / 1; object-fit: contain;
+            cursor: grab; width: 100%; 
+            max-width: min(1000px, 75vh); 
+            aspect-ratio: 1 / 1; 
             touch-action: none; box-shadow: inset 0 0 10px rgba(0,0,0,0.02);
+            user-select: none; -webkit-user-select: none;
         }
         canvas:active { cursor: grabbing; }
         
         .sidebar { display: flex; flex-direction: column; width: 100%; }
         @media (min-width: 1000px) {
-            .sidebar { flex: 0 0 380px; padding-left: 15px; border-left: 1px solid #e9ecef;}
+            .sidebar { flex: 0 0 380px; padding-left: 20px; border-left: 1px solid #e9ecef;}
         }
 
-        /* 标签页样式 */
         .tabs { display: flex; border-bottom: 2px solid #dee2e6; margin-bottom: 15px; }
         .tab-btn {
             flex: 1; padding: 12px; background: none; border: none; border-bottom: 3px solid transparent;
@@ -54,7 +55,6 @@
         .tab-content { display: none; flex-direction: column; gap: 15px; }
         .tab-content.active { display: flex; }
 
-        /* 面板通用样式 */
         .control-group { background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef; display: flex; flex-direction: column; gap: 5px; }
         label { font-size: 14px; font-weight: 600; color: #495057; display: flex; justify-content: space-between;}
         input[type=range] { width: 100%; cursor: pointer;}
@@ -65,7 +65,6 @@
         button.action-btn.play { background-color: #198754; }
         button.action-btn.reset { background-color: #ffc107; color: #212529; }
         
-        /* 题目面板样式 */
         .problem-text { font-size: 14px; line-height: 1.6; color: #333; background: #f8f9fa; padding: 12px; border-radius: 6px; margin: 0; border-left: 4px solid #0d6efd;}
         .option-btn {
             text-align: left; padding: 12px 15px; font-size: 14px; line-height: 1.4;
@@ -162,7 +161,6 @@
     const canvas = document.getElementById('simCanvas');
     const ctx = canvas.getContext('2d');
     
-    // UI Elements
     const playBtn = document.getElementById('playBtn');
     const resetBtn = document.getElementById('resetBtn');
     const clearBtn = document.getElementById('clearBtn');
@@ -176,15 +174,13 @@
     const explanationBox = document.getElementById('explanationBox');
     const optionBtns = document.querySelectorAll('.option-btn');
 
-    // Constants
     const width = canvas.width;
     const height = canvas.height;
     const cx = width / 2;
     const cy = height / 2;
     const R = 300; 
-    const INITIAL_THETA = Math.PI * 0.75; // 初始角 135度，符合原题左下角贴壁
+    const INITIAL_THETA = Math.PI * 0.75; 
 
-    // State Variables
     let r = parseInt(rSlider.value);
     let omega = parseFloat(speedSlider.value);
     let theta = INITIAL_THETA;      
@@ -194,7 +190,6 @@
     let isDraggingP = false;
     let currentPx = 0, currentPy = 0;
     
-    // UI 控制与逻辑
     function switchTab(tabId) {
         document.getElementById('tabSim').classList.remove('active');
         document.getElementById('tabProb').classList.remove('active');
@@ -204,13 +199,11 @@
         if(tabId === 'sim') {
             document.getElementById('tabSim').classList.add('active');
             document.getElementById('tabSimBtn').classList.add('active');
-            // 回到自由模式时关闭强制高亮
             explanationBox.style.display = 'none';
             optionBtns.forEach(btn => btn.className = 'option-btn');
         } else {
             document.getElementById('tabProb').classList.add('active');
             document.getElementById('tabProbBtn').classList.add('active');
-            // 切换到题解模式强制卡尔丹圆参数
             rSlider.value = 150; 
             updateParams();
             resetToProblemState();
@@ -227,20 +220,17 @@
         playBtn.innerText = "▶ 开始运动"; playBtn.style.backgroundColor = "#198754"; playBtn.style.color = "#fff";
         theta = INITIAL_THETA;
         phi_0 = 0; 
-        r = 150; // 强制满足原题要求
+        r = 150; 
         tracePath = [];
         showVectors.checked = true;
         showAccel.checked = false;
-        directionRadios[0].checked = true; // 默认逆时针
+        directionRadios[0].checked = true; 
         drawFrame();
     }
 
-    // 题目互动逻辑核心
     function selectOption(opt) {
-        // 重置按钮样式
         optionBtns.forEach(btn => btn.className = 'option-btn');
         const selectedBtn = document.getElementById('opt' + opt);
-        
         let explHtml = "";
         
         switch(opt) {
@@ -252,7 +242,7 @@
             case 'B':
                 selectedBtn.classList.add('selected', 'wrong');
                 resetToProblemState();
-                showAccel.checked = true; // 开启加速度显示
+                showAccel.checked = true;
                 drawFrame();
                 explHtml = "<strong>解析 B (错误)：</strong>画面已定格，并为您绘制了<strong>红色加速度矢量 $\\vec{a}_P$</strong>。点 $P$ 做简谐运动，其加速度总是指向平衡位置（大圆圆心 $O$），而不是指向小圆圆心 $C$。";
                 break;
@@ -260,14 +250,14 @@
                 selectedBtn.classList.add('selected', 'wrong');
                 resetToProblemState();
                 showTrace.checked = true;
-                isPlaying = true; // 自动播放
+                isPlaying = true;
                 playBtn.innerText = "⏸ 暂停运动"; playBtn.style.backgroundColor = "#ffc107"; playBtn.style.color = "#000";
                 explHtml = "<strong>解析 C (错误)：</strong>请观察正在播放的动画。圆心 $C$ 绕 $O$ 旋转一整圈（一个周期）的时间内，点 $P$ 刚好在直线上完成一次从一端到另一端再返回的过程。<strong>两者的周期是相等的</strong>（$T_P = T_C$）。";
                 break;
             case 'D':
                 selectedBtn.classList.add('selected', 'wrong');
                 resetToProblemState();
-                showAccel.checked = true; // 观察加速度变化
+                showAccel.checked = true; 
                 isPlaying = true;
                 playBtn.innerText = "⏸ 暂停运动"; playBtn.style.backgroundColor = "#ffc107"; playBtn.style.color = "#000";
                 explHtml = "<strong>解析 D (错误)：</strong>请观察红色的加速度箭头。根据简谐运动 $a = \\omega^2 x$，距离 $PO$ 越小（越靠近中心），受到的回复力越小，<strong>红色的加速度箭头会变得越短</strong>。当到达中心时加速度为零。";
@@ -276,18 +266,15 @@
         
         explanationBox.innerHTML = explHtml;
         explanationBox.style.display = 'block';
-        // 动态调用 MathJax 重新渲染新插入的 LaTeX 公式
         if (window.MathJax) { MathJax.typesetPromise([explanationBox]); }
     }
 
-    // 事件绑定
     rSlider.addEventListener('input', updateParams);
     speedSlider.addEventListener('input', updateParams);
     for (const radio of directionRadios) radio.addEventListener('change', () => { tracePath = []; if(!isPlaying) drawFrame(); });
     showVectors.addEventListener('change', drawFrame);
     showAccel.addEventListener('change', drawFrame);
     showTrace.addEventListener('change', drawFrame);
-    
     clearBtn.addEventListener('click', () => { tracePath = []; if(!isPlaying) drawFrame(); });
     resetBtn.addEventListener('click', resetToProblemState);
 
@@ -300,12 +287,46 @@
         }
     });
 
-    function getEventPos(evt) {
+    function getEventPos(e) {
         const rect = canvas.getBoundingClientRect();
-        const clientX = evt.touches && evt.touches.length > 0 ? evt.touches[0].clientX : evt.clientX;
-        const clientY = evt.touches && evt.touches.length > 0 ? evt.touches[0].clientY : evt.clientY;
-        return { x: (clientX - rect.left) * (canvas.width / rect.width), y: (clientY - rect.top) * (canvas.height / rect.height) };
+        return { 
+            x: (e.clientX - rect.left) * (canvas.width / rect.width), 
+            y: (e.clientY - rect.top) * (canvas.height / rect.height) 
+        };
     }
+
+    canvas.addEventListener('pointerdown', function(e) {
+        const pos = getEventPos(e);
+        if (Math.hypot(pos.x - currentPx, pos.y - currentPy) < 60) {
+            isDraggingP = true;
+            canvas.setPointerCapture(e.pointerId); 
+            if (e.cancelable) e.preventDefault();
+        }
+    });
+
+    canvas.addEventListener('pointermove', function(e) {
+        if (!isDraggingP) return;
+        if (e.cancelable) e.preventDefault();
+        
+        const pos = getEventPos(e);
+        const cx_small = cx + (R - r) * Math.cos(theta);
+        const cy_small = cy + (R - r) * Math.sin(theta);
+        
+        phi_0 = Math.atan2(pos.y - cy_small, pos.x - cx_small) + ((R - r) / r) * theta;
+        tracePath = []; 
+        if (!isPlaying) drawFrame(); 
+    });
+
+    canvas.addEventListener('pointerup', function(e) {
+        if (isDraggingP) {
+            isDraggingP = false;
+            canvas.releasePointerCapture(e.pointerId);
+        }
+    });
+
+    canvas.addEventListener('pointercancel', function(e) {
+        isDraggingP = false;
+    });
 
     function updateParams() {
         r = parseInt(rSlider.value);
@@ -315,24 +336,6 @@
         if(!isDraggingP) tracePath = []; 
         if(!isPlaying) drawFrame(); 
     }
-
-    function handleStart(e) {
-        const pos = getEventPos(e);
-        if (Math.hypot(pos.x - currentPx, pos.y - currentPy) < 50) { isDraggingP = true; if(e.cancelable) e.preventDefault(); }
-    }
-    function handleMove(e) {
-        if (!isDraggingP) return;
-        if(e.cancelable) e.preventDefault();
-        const pos = getEventPos(e);
-        const cx_small = cx + (R - r) * Math.cos(theta);
-        const cy_small = cy + (R - r) * Math.sin(theta);
-        phi_0 = Math.atan2(pos.y - cy_small, pos.x - cx_small) + ((R - r) / r) * theta;
-        tracePath = []; if (!isPlaying) drawFrame(); 
-    }
-    function handleEnd() { isDraggingP = false; }
-
-    canvas.addEventListener('mousedown', handleStart); canvas.addEventListener('mousemove', handleMove); window.addEventListener('mouseup', handleEnd);
-    canvas.addEventListener('touchstart', handleStart, {passive: false}); canvas.addEventListener('touchmove', handleMove, {passive: false}); window.addEventListener('touchend', handleEnd);
 
     function drawArrow(fromX, fromY, toX, toY, color, lineWidth = 2) {
         if (Math.abs(fromX - toX) < 0.1 && Math.abs(fromY - toY) < 0.1) return;
@@ -346,12 +349,10 @@
     function drawFrame() {
         ctx.clearRect(0, 0, width, height);
 
-        // 绘制大齿轮
         ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.strokeStyle = '#343a40'; ctx.lineWidth = 3; ctx.stroke();
         ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI * 2); ctx.fillStyle = '#000'; ctx.fill();
         ctx.fillText("O", cx - 25, cy + 20); ctx.font = "20px Arial";
 
-        // 运动学计算
         const cx_small = cx + (R - r) * Math.cos(theta);
         const cy_small = cy + (R - r) * Math.sin(theta);
         const dir = getDirection();
@@ -369,10 +370,10 @@
         const vpcy =  omega_rel * (currentPx - cx_small);
         const vpx = vcx + vpcx; const vpy = vcy + vpcy;
 
-        // 绘制轨迹
         if (isPlaying && !isDraggingP && showTrace.checked) {
             tracePath.push({x: currentPx, y: currentPy});
-            if (tracePath.length > 4000) tracePath.shift(); 
+            // 数组上限提升至 50000，基本不会再消失了
+            if (tracePath.length > 50000) tracePath.shift(); 
         }
         if (showTrace.checked && tracePath.length > 0) {
             ctx.beginPath(); ctx.moveTo(tracePath[0].x, tracePath[0].y);
@@ -380,18 +381,15 @@
             ctx.strokeStyle = 'rgba(220, 53, 69, 0.4)'; ctx.lineWidth = 3; ctx.stroke();
         }
 
-        // 绘制小齿轮
         ctx.beginPath(); ctx.arc(cx_small, cy_small, r, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(13, 110, 253, 0.5)'; ctx.lineWidth = 2.5; ctx.stroke();
         ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx_small, cy_small); ctx.lineTo(currentPx, currentPy); ctx.strokeStyle = '#adb5bd'; ctx.lineWidth = 1.5; ctx.stroke();
         
         ctx.beginPath(); ctx.arc(cx_small, cy_small, 6, 0, Math.PI * 2); ctx.fillStyle = '#0d6efd'; ctx.fill();
         ctx.fillStyle = '#0d6efd'; ctx.fillText("C", cx_small - 25, cy_small + 25);
         
-        // 绘制 P 点
         ctx.beginPath(); ctx.arc(currentPx, currentPy, isDraggingP ? 15 : 10, 0, Math.PI * 2); ctx.fillStyle = isDraggingP ? '#ffc107' : '#198754'; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
         ctx.fillStyle = '#198754'; ctx.fillText("P", currentPx + 15, currentPy - 15);
 
-        // 绘制速度矢量
         if (showVectors.checked) {
             const v_scale = 65; 
             drawArrow(currentPx, currentPy, currentPx + vcx * v_scale, currentPy + vcy * v_scale, '#0d6efd', 3); 
@@ -405,7 +403,6 @@
             drawArrow(currentPx, currentPy, currentPx + vpx * v_scale, currentPy + vpy * v_scale, '#198754', 5);
         }
 
-        // 绘制加速度矢量 (针对选项B和D)
         if (showAccel.checked) {
             const a_scale = 0.6; 
             const ax = cx - currentPx;
