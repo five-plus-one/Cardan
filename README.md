@@ -26,7 +26,7 @@
 进行矢量合成，得到点 $P$ 的绝对坐标 $(x, y)$：
 $$x = r\cos\omega t + r\cos(-\omega t) = 2r\cos\omega t = R\cos\omega t$$
 $$y = r\sin\omega t + r\sin(-\omega t) = r\sin\omega t - r\sin\omega t = 0$$
-**结论**：$y \equiv 0$，说明点 $P$ 的运动轨迹严格保持在 $x$ 轴上；且位移方程 $x = R\cos\omega t$ 证明了点 $P$ 做以 $O$ 为平衡位置的**简谐运动**。
+**结论**： $y \equiv 0$，说明点 $P$ 的运动轨迹严格保持在 $x$ 轴上；且位移方程 $x = R\cos\omega t$ 证明了点 $P$ 做以 $O$ 为平衡位置的**简谐运动**。
 
 ### 2. 速度分析与瞬心法 (A 选项)
 不使用微积分，纯用运动学几何也能秒杀 A 选项。
